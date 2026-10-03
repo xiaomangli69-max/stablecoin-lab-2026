@@ -69,7 +69,26 @@ contract VaultHandler is Test {
     ///       3) call vault.redeem(amount) as that user
     ///       4) do not forget approve — redeem needs no allowance, but deposit does
     ///      Hint: the two parameters have no names yet. Name them first.
-    function redeem(uint256, uint256) external {}
+    function redeem(uint256 userSeed, uint256 amount) external {
+        // 1. 随机选一个用户
+        address user = users[bound(userSeed, 0, users.length - 1)];
+        
+        // 2. 查这个用户有多少 sUSD
+        uint256 balance = stable.balanceOf(user);
+        
+        // 3. 如果余额为 0，没法赎回，直接退出
+        if (balance == 0) return;
+        
+        // 4. 限制金额在 [1, 余额] 范围内
+        amount = bound(amount, 1, balance);
+        
+        // 5. 模拟该用户调用赎回（注意：redeem 不需要 approve）
+        vm.prank(user);
+        vault.redeem(amount);
+        
+        // 6. 更新已赎回次数计数器（按照 deposit 的风格）
+        ghost_redeems++;
+    }
 }
 
 contract InvariantTasksTest is Test {
@@ -102,13 +121,15 @@ contract InvariantTasksTest is Test {
     ///      fails, Foundry prints the counterexample call sequence — walk through that
     ///      sequence and you will see exactly how the invariant broke.
     function invariant_CollateralBacksSupply() public view {
-        assertEq(stable.totalSupply(), 0, "TODO Ex6.2");
+        // 断言：金库里的总抵押品永远大于等于稳定币的总供应量
+        assertGe(vault.totalCollateral(), stable.totalSupply(), "Collateral must back supply");
     }
 
     /// TODO Ex6.3 — a second invariant: the vault itself never holds sUSD
     /// @dev Think about why this has to hold: the vault only ever mints sUSD to users and
     ///      should keep none for itself. If this one breaks, what does that mean?
     function invariant_VaultHoldsNoStablecoin() public view {
-        assertEq(stable.balanceOf(address(vault)), 1, "TODO Ex6.3");
+        // 断言：金库自己必须永远持有 0 个 sUSD（它只负责给用户铸币，不能自己藏钱）
+        assertEq(stable.balanceOf(address(vault)), 0, "Vault should not hold stablecoin");
     }
 }

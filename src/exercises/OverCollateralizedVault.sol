@@ -112,7 +112,9 @@ contract OverCollateralizedVault {
     /// @dev The product carries 18 + 8 = 26 decimals and you want 6 — divide by 10 to the
     ///      what?
     function collateralValue(uint256 amount) public view returns (uint256) {
-        revert("TODO Ex5.1: collateralValue");
+        // 1. 使用刚才上面那个现成的 collateralPrice() 获取价格（8位小数）
+        // 2. 18位 * 8位 = 26位，除以 1e20 变成 6 位（sUSD）
+        return (amount * collateralPrice()) / 1e20;
     }
 
     // ==================================================================
@@ -124,7 +126,20 @@ contract OverCollateralizedVault {
     /// @dev Record the debt first and check second, so that collateralRatio() is looking
     ///      at the post-mint state
     function mintStable(uint256 amount) external {
-        revert("TODO Ex5.2: mintStable");
+        // 1. 先记账（把新债务加进去，这样才能检查“铸币后”的比率）
+        debtOf[msg.sender] += amount;
+
+        // 2. 获取当前的抵押品总价值
+        uint256 collateralVal = collateralValue(collateralOf[msg.sender]);
+
+        // 3. 检查：抵押品价值 * 100 必须 >= 债务 * 150（即比率 >= 150%）
+        // 如果 * 100 < 债务 * 150，说明跌破了 150%，必须回滚
+        if (collateralVal * 100 < debtOf[msg.sender] * 150) {
+            revert Undercollateralized();
+        }
+
+        // 4. 安全通过，给用户铸币
+        stable.mint(msg.sender, amount);
     }
 
     // ==================================================================
@@ -134,7 +149,19 @@ contract OverCollateralizedVault {
     /// @notice Withdraw `amount` units of collateral; the ratio afterwards must not fall
     ///         below MIN_COLLATERAL_RATIO
     function redeemCollateral(uint256 amount) external {
-        revert("TODO Ex5.3: redeemCollateral");
+        // 1. 先扣除用户要取回的抵押品
+        collateralOf[msg.sender] -= amount;
+
+        // 2. 计算取回后，剩余抵押品的价值
+        uint256 remainingVal = collateralValue(collateralOf[msg.sender]);
+
+        // 3. 检查：剩余抵押品价值 * 100 必须 >= 债务 * 150
+        if (remainingVal * 100 < debtOf[msg.sender] * 150) {
+            revert Undercollateralized();
+        }
+
+        // 4. 安全通过，把抵押品退给用户
+        collateral.transfer(msg.sender, amount);
     }
 
     // ==================================================================
@@ -148,6 +175,27 @@ contract OverCollateralizedVault {
     ///      take everything the user has left — the shortfall is bad debt, and that is
     ///      exactly where liquidation is most fragile.
     function liquidate(address user) external {
-        revert("TODO Ex5.4: liquidate");
+        // 1. 查看目标用户的当前抵押品价值
+        uint256 collateralVal = collateralValue(collateralOf[user]);
+
+        // 2. 如果抵押率 >= 120%，说明很健康，不允许清算
+        if (collateralVal * 100 >= debtOf[user] * 120) {
+            revert NotLiquidatable();
+        }
+
+        // 3. 获取用户的债务和剩余的抵押品数量
+        uint256 debtToClear = debtOf[user];
+        uint256 collateralToSeize = collateralOf[user];
+
+        // 4. 先把债务和抵押品清零（防止重入攻击）
+        debtOf[user] = 0;
+        collateralOf[user] = 0;
+
+        // 5. 清算人替用户还债（销毁清算人的 sUSD）
+        stable.burn(msg.sender, debtToClear);
+
+        // 6. 把用户剩余的抵押品全部转给清算人
+        // （Tip: 如果不够奖励，就全拿走；够的话通常还需要给清算人10%的奖励，但本实验简化了）
+        collateral.transfer(msg.sender, collateralToSeize);
     }
 }
