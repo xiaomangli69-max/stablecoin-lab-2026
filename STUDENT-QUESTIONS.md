@@ -9,23 +9,26 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 **A1.** The vault holds `MINTER_ROLE`, so it can `burn` any user's balance. Explain why that is a risk, then write out how you would change `Vault` and `SimpleStablecoin` to remove it.
 
 > Your answer:
-Risk: In the current SimpleStablecoin code, the permission check for the burn function is onlyRole(MINTER_ROLE). To enable the Vault to destroy users' coins during redemption, we directly assigned the MINTER_ROLE to the Vault. However, this means that the Vault becomes a super administrator. As long as there are vulnerabilities in the Vault contract or insiders engage in malicious behavior, it can bypass user authorization (approve) and instantly zero out any account's sUSD balance. This is a fatal centralized backdoor that will completely destroy user trust.
 
-How to change:In SimpleStablecoin: add a dedicated BURNER_ROLE instead of reusing MINTER_ROLE to execute burns. At the same time, it is mandated that only redemptions initiated by the user themselves can destroy their corresponding balances.
-In the Vault: Change the role of the Vault from MINTER_ROLE to BURNER_ROLE. AndWhen calling burn, only the balance of msg.sender (the current user who initiated the redemption) can be burned, and user authorization is required. For example, restrict it to stable.burn(msg.sender, amount), and never pass in the address of other users.
+> Risk: In the current SimpleStablecoin code, the permission check for the burn function is onlyRole(MINTER_ROLE). To enable the Vault to destroy users' coins during redemption, we directly assigned the MINTER_ROLE to the Vault. However, this means that the Vault becomes a super administrator. As long as there are vulnerabilities in the Vault contract or insiders engage in malicious behavior, it can bypass user authorization (approve) and instantly zero out any account's sUSD balance. This is a fatal centralized backdoor that will completely destroy user trust.
+
+> How to change: In SimpleStablecoin: add a dedicated BURNER_ROLE instead of reusing MINTER_ROLE to execute burns. At the same time, it is mandated that only redemptions initiated by the user themselves can destroy their corresponding balances.
+
+> In the Vault: Change the role of the Vault from MINTER_ROLE to BURNER_ROLE. AndWhen calling burn, only the balance of msg.sender (the current user who initiated the redemption) can be burned, and user authorization is required. For example, restrict it to stable.burn(msg.sender, amount), and never pass in the address of other users.
 
 <br><br><br>
 
 **A2.** In this contract `DEFAULT_ADMIN_ROLE`, `MINTER_ROLE` and `PAUSER_ROLE` all go to the same address. How would you split them in production, and who holds each?
 
 > Your answer:
-In the current code, it is extremely dangerous to have DEFAULT_ADMIN_ROLE, MINTER_ROLE, and PAUSER_ROLE all pointing to the same address, as this constitutes a "Single Point of Failure". Permissions must be split.
 
-DEFAULT_ADMIN_ROLE: It should not be assigned to an EOA address (personal wallet). Instead, it should be assigned to a "Multisig Wallet". Alternatively, it can be assigned to a "DAO", where all token holders are treated as shareholders, and any major decisions are made through voting by everyone. In terms of code implementation, DEFAULT_ADMIN_ROLE should only have the power to assign roles through grantRole and revokeRole, and must not be granted business permissions such as mint and pause at the same time.
+>In the current code, it is extremely dangerous to have DEFAULT_ADMIN_ROLE, MINTER_ROLE, and PAUSER_ROLE all pointing to the same address, as this constitutes a "Single Point of Failure". Permissions must be split.
 
-MINTER_ROLE: Grant the Vault contract the MINTER_ROLE, but as stated in A1, it must not be allowed to possess unrestricted burn rights simultaneously. Therefore, allow the Vault to possess the MINTER_ROLE to perform deposit minting, but an independent BURNER_ROLE must be introduced in SimpleStablecoin. The Vault can only destroy balances actively redeemed by users through the BURNER_ROLE.
+>DEFAULT_ADMIN_ROLE: It should not be assigned to an EOA address (personal wallet). Instead, it should be assigned to a "Multisig Wallet". Alternatively, it can be assigned to a "DAO", where all token holders are treated as shareholders, and any major decisions are made through voting by everyone. In terms of code implementation, DEFAULT_ADMIN_ROLE should only have the power to assign roles through grantRole and revokeRole, and must not be granted business permissions such as mint and pause at the same time.
 
-PAUSER_ROLE: This role should not be granted directly to an individual wallet, but rather to a Multisig Wallet contract. Since hacker attacks can occur very quickly, DAO voting may not be able to respond in time, so the Security Council needs to be able to complete the Multisig and execute pause() within a few minutes. To prevent abuse, the contract logic can be set up such that resuming operation after a pause requires DAO voting, or the paused state automatically expires after 7 days.
+>MINTER_ROLE: Grant the Vault contract the MINTER_ROLE, but as stated in A1, it must not be allowed to possess unrestricted burn rights simultaneously. Therefore, allow the Vault to possess the MINTER_ROLE to perform deposit minting, but an independent BURNER_ROLE must be introduced in SimpleStablecoin. The Vault can only destroy balances actively redeemed by users through the BURNER_ROLE.
+
+>PAUSER_ROLE: This role should not be granted directly to an individual wallet, but rather to a Multisig Wallet contract. Since hacker attacks can occur very quickly, DAO voting may not be able to respond in time, so the Security Council needs to be able to complete the Multisig and execute pause() within a few minutes. To prevent abuse, the contract logic can be set up such that resuming operation after a pause requires DAO voting, or the paused state automatically expires after 7 days.
 
 <br><br><br>
 
@@ -36,26 +39,28 @@ PAUSER_ROLE: This role should not be granted directly to an individual wallet, b
 **B1.** `_update` is the single entry point for every balance change, so `pause()` freezes transfers, minting and redemption together. If you wanted "pause transfers but **allow redemption**", how would you change it? Give the approach — full code not required.
 
 > Your answer:
-"_update" is the essential underlying path for all transfers, minting, and burning operations. The current code directly adds a pause on "_update", resulting in users being completely locked out.
 
-To achieve "pausing regular transfers but allowing redemptions", the modification approach is: instead of implementing a one-size-fits-all solution at the outermost level, we should add a judgment within the _update function.
+>"_update" is the essential underlying path for all transfers, minting, and burning operations. The current code directly adds a pause on "_update", resulting in users being completely locked out.
 
-When the contract is in a paused state, check the transfer parties (from and to) of this transaction. If it is a mutual transfer between ordinary users, directly report an error and reject it; but if one party of this transaction is the Vault, it indicates that the user is performing a redemption operation, and it is allowed to proceed.
+>To achieve "pausing regular transfers but allowing redemptions", the modification approach is: instead of implementing a one-size-fits-all solution at the outermost level, we should add a judgment within the _update function.
 
-This is equivalent to only keeping the escape route of "user - vault" open during the suspension period, while blocking the panic selling in the market of "user - user".In specific implementation, a whitelist can be set for the vault address.
+>When the contract is in a paused state, check the transfer parties (from and to) of this transaction. If it is a mutual transfer between ordinary users, directly report an error and reject it; but if one party of this transaction is the Vault, it indicates that the user is performing a redemption operation, and it is allowed to proceed.
+
+>This is equivalent to only keeping the escape route of "user - vault" open during the suspension period, while blocking the panic selling in the market of "user - user".In specific implementation, a whitelist can be set for the vault address.
 
 <br><br><br>
 
 **B2.** In 2008, when a money-market fund "broke the buck", redemptions were frozen for days. In 2023 USDC depegged to $0.87 after a reserve bank failed, but redemptions were **not** shut. Compare the two responses — what does closing the redemption channel, or leaving it open, do to a stablecoin?
 
 > Your answer:
-The comparison between these two historical events :
 
-The consequences of freezing redemptions in 2008: When money funds closed their redemption channels, investors fell into extreme panic. The inability to withdraw money led to an instantaneous collapse of market confidence, and everyone sold at any cost, making the "liquidity crisis" immediately escalate into a "solvency crisis". Closing the redemption channel was equivalent to declaring the system dead, and ultimately, the fund could not escape the fate of collapse.
+>The comparison between these two historical events :
 
-The consequence of USDC remaining open in 2023: Despite a reserve bank failed, which caused USDC to temporarily de-peg to $0.87, Circle resolutely kept the redemption channel open. This sent a strong signal to the market that "the underlying dollar reserves are still there." Arbitrageurs saw the huge profits from buying at $0.87 and redeeming at $1.00, and they entered the market to buy USDC and redeem it. This spontaneous market arbitrage behavior created huge buying pressure, which quickly pushed the price of USDC back to $1.00 within just a few days.
+>The consequences of freezing redemptions in 2008: When money funds closed their redemption channels, investors fell into extreme panic. The inability to withdraw money led to an instantaneous collapse of market confidence, and everyone sold at any cost, making the "liquidity crisis" immediately escalate into a "solvency crisis". Closing the redemption channel was equivalent to declaring the system dead, and ultimately, the fund could not escape the fate of collapse.
 
-Conclusion: The redemption channel is the lifeline of stable coins. Closing it will trigger a trust collapse and a death spiral; keeping it open can activate the arbitrage mechanism in the market, relying on market forces to self-repair the detachment.
+>The consequence of USDC remaining open in 2023: Despite a reserve bank failed, which caused USDC to temporarily de-peg to $0.87, Circle resolutely kept the redemption channel open. This sent a strong signal to the market that "the underlying dollar reserves are still there." Arbitrageurs saw the huge profits from buying at $0.87 and redeeming at $1.00, and they entered the market to buy USDC and redeem it. This spontaneous market arbitrage behavior created huge buying pressure, which quickly pushed the price of USDC back to $1.00 within just a few days.
+
+>Conclusion: The redemption channel is the lifeline of stable coins. Closing it will trigger a trust collapse and a death spiral; keeping it open can activate the arbitrage mechanism in the market, relying on market forces to self-repair the detachment.
 
 <br><br><br>
 
