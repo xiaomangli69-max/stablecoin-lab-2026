@@ -71,10 +71,13 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 **C1.** Under what conditions does this coin depeg? Distinguish at least two classes of cause, and say how each one shows up in the invariant `totalCollateral() >= totalSupply()`.
 
 > Your answer:
+> 
 > There are typically two fundamental reasons for stablecoin de-pegging, which exhibit distinct behaviors in terms of invariants:
+> 
 > Reason 1: Solvency Issue
 > The real money in the vault is stolen, misappropriated, or the collateral (if it is Ethereum, etc.) experiences a sharp price drop.
 > Invariant violation: The invariant is broken (totalCollateral < totalSupply). As the system suddenly has coins without asset backing, people notice the empty vault and will frantically sell, leading to a price crash.
+> 
 > Reason 2: Liquidity Issue
 > The funds in the vault are fully sufficient (the invariant still holds), but the project party has pressed the pause button, or legal/regulatory requirements have frozen the redemption channel. Everyone has coins in hand, but they cannot exchange them back into US dollars.
 > Invariant manifestation: The invariant still holds (totalCollateral >= totalSupply is not violated). Mathematically, it is sound, but in reality, due to the inability to redeem, everyone panics and sells, causing the price to still de-anchor (for example, falling to $0.9).
@@ -86,6 +89,7 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 **C2.** Suppose an attacker bribes their way to `MINTER_ROLE`, mints 1,000,000 sUSD out of nothing and redeems it all. Describe the flow of funds, and name the step that could have stopped them.
 
 > Your answer:
+> 
 > Capital flow:
 > 1. The attacker obtains the `MINTER_ROLE` permission through bribery.
 > 2. The attacker calls the `mint` function, minting 1,000,000 sUSD for themselves out of thin air, causing an increase in `totalSupply`.
@@ -107,6 +111,7 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 **D1.** Right now the collateral is `MockUSDC` and `totalCollateral()` just reads an on-chain balance — simple and reliable. If the collateral were **US Treasuries**, could this invariant still be written that way? What new problems appear?
 
 > Your answer:
+> 
 > If the collateral is a US Treasury bond, `totalCollateral()` will cannot be implemented directly by reading the on-chain balance as it is currently done. Treasury bonds are off-chain assets, and an Oracle must be introduced to transmit the off-chain valuation to the on-chain system.
 >
 > The following new issues will arise:
@@ -120,6 +125,7 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 **D2.** If the collateral were **a building**, how would you put it inside this vault? Which off-chain roles or legal structures would you have to introduce?
 
 > Your answer:
+> 
 > To incorporate a building into this digital vault, we must achieve this through asset tokenization:
 >
 > 1. Legal structure (off-chain): A special purpose vehicle (SPV) or trust must be established, with the SPV legally holding the property rights of the real estate project in the real world. This isolates the property from the bankruptcy of the project party.
