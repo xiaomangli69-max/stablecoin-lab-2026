@@ -132,8 +132,11 @@ Answer directly under each question. 150–300 words each — **reasoning over l
 > 2. Token issuance (on-chain): SPV divides the ownership of the property and issues on-chain tokens (such as ERC-20 or ERC-721) representing the asset shares. The vault is collateralized by these tokens representing the property rights.
 > 3. Introduction of off-chain roles:
 > Custodian: Responsible for the daily management of physical real estate, including rent collection and tax payment.
+> 
 > Appraiser: Regularly conduct valuation of real estate projects and feed the prices to the on-chain contract through an oracle.
+> 
 > Legal compliance consultant: Ensure that in the event of default liquidation, on-chain token holders possess legitimate recourse and property transfer rights.
+> 
 > Ultimately, `totalCollateral()` will read the product of the token balance representing the property rights and its oracle valuation.
 
 <br><br><br>
