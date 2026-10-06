@@ -150,11 +150,11 @@ Turn the red tests green in `test/exercises/01_LoopTasks.t.sol` to cover the sce
 
 | Scenario | Your test function name |
 |---|---|
-| Minting by a non-minter reverts | |
-| Transfers revert while paused | |
-| **Redemption** reverts while paused | |
-| An attacker cannot burn someone else's balance | |
-| ...but the vault holding `MINTER_ROLE` can | |
+| Minting by a non-minter reverts | `test_Ex4_Mint_RevertsForNonMinter` |
+| Transfers revert while paused | `test_Ex4_Pause_BlocksTransfers` |
+| **Redemption** reverts while paused | `test_Ex4_Pause_BlocksRedeem` |
+| An attacker cannot burn someone else's balance | `test_Ex4_AttackerCannotBurnOthersBalance` |
+| ...but the vault holding `MINTER_ROLE` can | `test_Ex4_VaultHoldsTheKey_CanBurnAnyonesBalance` |
 
 That last pair is meant to be read together: the guard is written correctly, but the key was handed to the vault. Keep it in mind when you answer A1.
 
