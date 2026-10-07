@@ -161,3 +161,13 @@ That last pair is meant to be read together: the guard is written correctly, but
 Now write one more scenario you consider **most likely to be attacked**, and say why you picked it:
 
 > Your answer:
+> 
+> The most likely attack scenario is Compromised Admin Key / Insider Threat.
+> 
+> Reason:
+> 
+> 1. Extremely low attack threshold: Compared to seeking reentrant attacks or oracle manipulation vulnerabilities in smart contract code, hackers are more inclined to steal the private key of `DEFAULT_ADMIN_ROLE` (the highest administrator) through phishing emails, social engineering, or internal bribery.
+> 2. Destructive consequences: As we manually simulated in Ex3, once an attacker obtains administrator privileges, he can call `grantRole` to grant himself the `MINTER_ROLE` (coinage right). Then, he can mint 1 million sUSD out of thin air and immediately exchange all the real USD collateral in the treasury through the `redeem` function of the treasury.
+> 3. Difficult to prevent: This is the inherent risk brought by highly centralized permissions. No matter how secure the code is, it cannot prevent "insiders" from committing evil or losing private keys.
+> 
+> Therefore, in a real production environment, it is absolutely unacceptable to entrust all roles to a single individual. It is necessary to use a multisignature wallet (Multisig) combined with a time lock (Timelock) to manage privileged roles, and replace the treasury role with a restricted `BURNER_ROLE`, thereby reducing the risk of a single point of failure.
