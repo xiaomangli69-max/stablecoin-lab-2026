@@ -276,3 +276,16 @@ Question 4 is the door into next week's RWA lab.
 ![Architecture](<./Picture(ScreenshotsAndArchitecture)/architecture.png>)
 ![Ex3 Depeg](<./Picture(ScreenshotsAndArchitecture)/Ex3_Depeg.jpg>)
 ![Test Passed](<./Picture(ScreenshotsAndArchitecture)/test_passed.jpg>)
+
+---
+
+## 9. Tier 2 Deployment Details (Sepolia Testnet)
+
+1. MockUSDC Contract Address: 0x51beB07872BB1dA3f32980Aa4974A3031b988f8F
+   Etherscan Link: https://sepolia.etherscan.io/address/0x51beB07872BB1dA3f32980Aa4974A3031b988f8F
+
+2. SimpleStablecoin Contract Address: 0xe64f691AFd3c73c99CBdFF139460fc6ecd09eb85
+   Etherscan Link: https://sepolia.etherscan.io/address/0xe64f691AFd3c73c99CBdFF139460fc6ecd09eb85
+
+3. Vault Contract Address: 0xd494199DCbF130cB818a4a8e09b1FCb15a2F6c2e
+   Etherscan Link: https://sepolia.etherscan.io/address/0xd494199DCbF130cB818a4a8e09b1FCb15a2F6c2e
