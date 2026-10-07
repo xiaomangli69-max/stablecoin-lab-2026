@@ -271,4 +271,7 @@ Question 4 is the door into next week's RWA lab.
 
 ![Architecture](<./Picture(ScreenshotsAndArchitecture)/architecture.png>)
 ![Ex3 Depeg](<./Picture(ScreenshotsAndArchitecture)/Ex3_Depeg.jpg>)
+
+
+
 ![Test Passed](<./Picture(ScreenshotsAndArchitecture)/test_passed.jpg>)
