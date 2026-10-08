@@ -38,25 +38,25 @@ contract LoopTasksTest is Test {
     ///      deposit(x). Hint: use vm.assume to rule out x == 0, and faucet alice enough
     ///      usdc first.
     function test_Ex2_DepositIncreasesSupplyByExactly(uint96 raw) public {
-        // 将随机数转换成一个合理的金额（最高 100 万 USDC）
+        // Convert the random number into a reasonable amount of money (up to 1 million USDC)
         uint256 amount = uint256(raw) % 1_000_000e6;
         
-        // 用 vm.assume 排除掉金额为 0 的情况，否则存款会失败
+        // Use vm.assume to exclude the case where the amount is 0, otherwise the deposit will fail
         vm.assume(amount > 0);
 
-        // 记录存款前的总供应量
+        // Record the total supply before the deposit
         uint256 initialSupply = stable.totalSupply();
 
-        // 1. 去水龙头领取对应的 mUSDC（给自己，即 address(this)）
+        // 1. Go to the faucet to claim the corresponding mUSDC (for yourself, i.e. address(this))
         usdc.faucet(address(this), amount);
 
-        // 2. 授权金库，允许它使用你的 mUSDC
+        // 2. Authorize the vault to use your mUSDC
         usdc.approve(address(vault), amount);
 
-        // 3. 存入金库，这会铸造等量的 sUSD
+        // 3. Deposit into the vault, and an equivalent amount of sUSD will be minted
         vault.deposit(amount);
 
-        // 4. 断言：总供应量必须精确增加 amount
+        // 4. Assert: The total supply must be increased by exactly amount
         assertEq(stable.totalSupply(), initialSupply + amount, "Supply did not increase by exactly amount");
     }
 
@@ -65,21 +65,21 @@ contract LoopTasksTest is Test {
     ///      There is no expected answer here; the point is that you run it yourself and
     ///      read the numbers.
     function test_Ex2_DecimalsTrap() public {
-        // 你习惯性地用了 18 位小数的写法，但 MockUSDC 其实是 6 位小数
+        // MockUSDC actually has 6 decimal
         uint256 trapAmount = 1000e18; 
         
         uint256 initialSupply = stable.totalSupply();
 
-        // 1. 去水龙头领 1000e18 个最小单位的 mUSDC
+        // 1. Go to the faucet and claim 1000e18 minimum units of mUSDC
         usdc.faucet(address(this), trapAmount);
 
-        // 2. 授权金库
+        // 2. Authorized Vault
         usdc.approve(address(vault), trapAmount);
 
-        // 3. 存入金库。注意：这里绝对不会 revert，因为系统只是忠实执行你的指令
+        // 3. Deposit into the vault.
         vault.deposit(trapAmount);
 
-        // 4. 断言：不变量依然成立，供应量确实增加了 trapAmount（系统并没有算错，是你输入错了）
+        // 4. The invariant still holds, and the supply indeed increased by trapAmount
         assertEq(stable.totalSupply(), initialSupply + trapAmount, "The invariant still holds, but the amount is off by 10^12");
     }
 
@@ -90,22 +90,22 @@ contract LoopTasksTest is Test {
     /// @dev The attacker has no MINTER_ROLE, so calling mint directly must revert. Use
     ///      vm.expectRevert + abi.encodeWithSelector to pin down the exact error.
     function test_Ex4_Mint_RevertsForNonMinter() public {
-        vm.prank(alice); // 下一个调用来自 alice
-        vm.expectRevert(); // 预期会 revert
-        stable.mint(alice, 100e6); // 尝试为自己铸币
+        vm.prank(alice); // The next call comes from Alice
+        vm.expectRevert(); // expected to revert
+        stable.mint(alice, 100e6); // Try to mint coins for yourself
     }
 
     /// @dev After pause(), an ordinary transfer must revert
     function test_Ex4_Pause_BlocksTransfers() public {
-        // 1. 先给 alice 一点币，方便她进行转账
+        // 1. Give Alice some coins first to facilitate her transfer
         vm.prank(admin);
         stable.mint(alice, 100e6);
 
-        // 2. 管理员暂停合约
+        // 2. The administrator has suspended the contract
         vm.prank(admin);
         stable.pause();
 
-        // 3. alice 尝试向别人转账，预期失败
+        // 3. Alice attempts to transfer money to someone else, but anticipates failure
         vm.prank(alice);
         vm.expectRevert();
         stable.transfer(address(0x123), 10e6);
@@ -115,18 +115,18 @@ contract LoopTasksTest is Test {
     ///      else — why is that bad news in a real crisis?
     ///      (This is STUDENT-QUESTIONS.md B1 and B2.)
     function test_Ex4_Pause_BlocksRedeem() public {
-        // 1. alice 存钱，拿到 sUSD
+        // 1. Alice saves money and obtains sUSD
         vm.startPrank(alice);
         usdc.faucet(alice, 100e6);
         usdc.approve(address(vault), 100e6);
         vault.deposit(100e6);
         vm.stopPrank();
 
-        // 2. 管理员暂停合约
+        // 2. The administrator suspends the contract
         vm.prank(admin);
         stable.pause();
 
-        // 3. alice 尝试赎回，预期失败
+        // 3. Alice attempts to redeem, but expects failure
         vm.prank(alice);
         vm.expectRevert();
         vault.redeem(100e6);
@@ -134,11 +134,11 @@ contract LoopTasksTest is Test {
 
     /// @dev An attacker cannot burn someone else's balance
     function test_Ex4_AttackerCannotBurnOthersBalance() public {
-        // 1. 给 alice 一些币
+        // 1. Give Alice some coins
         vm.prank(admin);
         stable.mint(alice, 100e6);
 
-        // 2. 攻击者尝试直接销毁 alice 的余额，预期失败
+        // 2. The attacker attempts to directly deplete Alice's balance, anticipating failure
         vm.prank(attacker);
         vm.expectRevert();
         stable.burn(alice, 100e6);
@@ -147,15 +147,15 @@ contract LoopTasksTest is Test {
     /// @dev ...but the vault can, because it holds MINTER_ROLE and burn() answers to that
     ///      same role. This test proves the backdoor exists; it does not justify it.
     function test_Ex4_VaultHoldsTheKey_CanBurnAnyonesBalance() public {
-        // 1. 给 alice 一些币
+        // 1. Give Alice some coins
         vm.prank(admin);
         stable.mint(alice, 100e6);
 
-        // 2. 伪装成金库（金库有 MINTER_ROLE）
+        // 2. Disguise as a vault(the vault has MINTER_ROLE)
         vm.prank(address(vault));
-        stable.burn(alice, 100e6); // 直接销毁，这次不报错
+        stable.burn(alice, 100e6); // Destroy directly, no error reporting this time
 
-        // 3. 验证 alice 的余额归零
+        // 3. Verify that Alice's balance is reset to zero
         assertEq(stable.balanceOf(alice), 0);
     }
 }

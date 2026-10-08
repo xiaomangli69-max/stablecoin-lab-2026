@@ -70,23 +70,23 @@ contract VaultHandler is Test {
     ///       4) do not forget approve — redeem needs no allowance, but deposit does
     ///      Hint: the two parameters have no names yet. Name them first.
     function redeem(uint256 userSeed, uint256 amount) external {
-        // 1. 随机选一个用户
+        // 1. Randomly select a user
         address user = users[bound(userSeed, 0, users.length - 1)];
         
-        // 2. 查这个用户有多少 sUSD
+        // 2. Check how many sUSD this user has
         uint256 balance = stable.balanceOf(user);
         
-        // 3. 如果余额为 0，没法赎回，直接退出
+        // 3. If the balance is 0, there is no way to redeem, so exit directly
         if (balance == 0) return;
         
-        // 4. 限制金额在 [1, 余额] 范围内
+        // 4. Limit the amount to be within the range of [1, balance]
         amount = bound(amount, 1, balance);
         
-        // 5. 模拟该用户调用赎回（注意：redeem 不需要 approve）
+        // 5. Simulate the user calling redeem 
         vm.prank(user);
         vault.redeem(amount);
         
-        // 6. 更新已赎回次数计数器（按照 deposit 的风格）
+        // 6. Update the redeemed times counter 
         ghost_redeems++;
     }
 }
@@ -121,7 +121,7 @@ contract InvariantTasksTest is Test {
     ///      fails, Foundry prints the counterexample call sequence — walk through that
     ///      sequence and you will see exactly how the invariant broke.
     function invariant_CollateralBacksSupply() public view {
-        // 断言：金库里的总抵押品永远大于等于稳定币的总供应量
+        // Assert: The total collateral in the vault is always greater than or equal to the total supply of stable coins
         assertGe(vault.totalCollateral(), stable.totalSupply(), "Collateral must back supply");
     }
 
@@ -129,7 +129,7 @@ contract InvariantTasksTest is Test {
     /// @dev Think about why this has to hold: the vault only ever mints sUSD to users and
     ///      should keep none for itself. If this one breaks, what does that mean?
     function invariant_VaultHoldsNoStablecoin() public view {
-        // 断言：金库自己必须永远持有 0 个 sUSD（它只负责给用户铸币，不能自己藏钱）
+        // Assert: The vault must always hold 0 sUSD (it is only responsible for minting coins for users and cannot keep the money itself)
         assertEq(stable.balanceOf(address(vault)), 0, "Vault should not hold stablecoin");
     }
 }
